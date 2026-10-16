@@ -2,6 +2,15 @@
 
 October 15, 2026. This records observed checks separately from tests that require live configuration.
 
+## Workflow builder demo
+
+- All 25 existing application tests and the production build pass after the builder addition.
+- Browser checks confirmed an empty initial canvas, 32 searchable example modules across seven teams, team filtering, add/insert/remove, undo, drag ordering, and keyboard move buttons.
+- Edited a step title, duration, timing mode, and context setting; refreshed and confirmed that the browser-local draft restored the same order and settings.
+- Completed all four steps of a preview and verified sequential unlocking, submitted states, previous-output context, and disabled context carryover. Escape closes the preview.
+- Checked desktop and 390×844 mobile layouts. The mobile page has no horizontal overflow; the settings drawer fits the viewport. Cleared the local QA draft afterward.
+- This preview does not exercise real candidate tools or alter invitations or submissions. The existing live assessment remains separate.
+
 ## Employer access update
 
 At the owner's request, the employer password gate, login/logout endpoints, and sign-out control have been removed. The dashboard and invitation/configuration endpoints are public demo controls. Earlier login checks below describe the original implementation.

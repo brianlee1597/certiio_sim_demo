@@ -46,6 +46,14 @@ Generate each secret separately with `openssl rand -hex 32`. Changing `SESSION_S
 
 Do not enable Vercel deployment protection on the production candidate origin: candidates and authenticated LiveKit/Blob service callbacks must be able to reach it. The employer dashboard and invitation controls are public; candidate sessions, artifact ownership, callback authentication, invitation email rate limits, and request-origin checks remain enforced. Preview deployments may keep Vercel protection and must use isolated service settings if exercised.
 
+## Workflow builder demo
+
+Open the **Builder** tab or `/?tab=builder` to start with an empty workflow. The library contains 32 fictional modules across Operations, Sales, Legal, Customer Success, Finance, People, and Engineering, with searchable briefs, example outputs, and assessment signals.
+
+Add or insert modules, drag them into order (or use the keyboard-accessible move buttons), and configure titles, time allowances, briefs, and context carryover. Changes save on the current browser/device. Remove, clear, and edit actions support undo. The candidate preview walks through sequential unlocking and context handoffs.
+
+This is an interactive builder demonstration. Its example modules do not launch tools, run assessments, send invitations, or modify the live three-stage AI FDE exercise.
+
 ## Candidate flow
 
 - **Customer Roleplay, 15 minutes:** camera and microphone preflight, a real LiveKit room, fixed-scenario AI customer, mute controls, live captions, durable timestamped transcript. The timer waits for an agent and active camera/microphone tracks. Without LiveKit, the page explains the setup requirement and cannot advance.

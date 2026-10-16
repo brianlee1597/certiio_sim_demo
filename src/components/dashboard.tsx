@@ -8,6 +8,7 @@ import {
   ArrowUpRight,
   AudioLines,
   BarChart3,
+  Blocks,
   Check,
   ChevronDown,
   ChevronRight,
@@ -37,6 +38,7 @@ import {
 } from "@/lib/domain";
 import { candidates, type Candidate } from "@/lib/candidates";
 import { api, Brand, Empty, Footer, Pill, Spinner } from "./shared";
+import { WorkflowBuilder } from "./workflow-builder";
 const stageIcons = {
   roleplay: AudioLines,
   design: Network,
@@ -45,7 +47,7 @@ const stageIcons = {
 type Invite = Invitation & { link: string; runs: Run[] };
 export function Dashboard({ initialTab }: { initialTab: string }) {
   const [tab, setTab] = useState(
-    ["pipeline", "invites", "results"].includes(initialTab)
+    ["pipeline", "builder", "invites", "results"].includes(initialTab)
       ? initialTab
       : "pipeline",
   );
@@ -63,13 +65,14 @@ export function Dashboard({ initialTab }: { initialTab: string }) {
     }
   }
   useEffect(() => {
+    if (tab === "builder") return;
     refresh();
     api("/api/admin/config")
       .then(setConfig)
       .catch(() => {});
     const interval = setInterval(refresh, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [tab]);
   function changeTab(t: string) {
     setTab(t);
     history.replaceState(null, "", `/?tab=${t}`);
@@ -90,17 +93,30 @@ export function Dashboard({ initialTab }: { initialTab: string }) {
         </div>
         <div className="sidebar-label">HIRING WORKSPACE</div>
         <button
-          className="side-nav selected"
+          className={`side-nav${tab === "pipeline" ? " selected" : ""}`}
           onClick={() => changeTab("pipeline")}
         >
           <GitBranch size={18} />
           Hiring pipeline <span>1</span>
         </button>
-        <button className="side-nav" onClick={() => changeTab("invites")}>
+        <button
+          className={`side-nav${tab === "builder" ? " selected" : ""}`}
+          onClick={() => changeTab("builder")}
+        >
+          <Blocks size={18} />
+          Workflow builder <span>NEW</span>
+        </button>
+        <button
+          className={`side-nav${tab === "invites" ? " selected" : ""}`}
+          onClick={() => changeTab("invites")}
+        >
           <Mail size={18} />
           Invitations <span>{invites.length}</span>
         </button>
-        <button className="side-nav" onClick={() => changeTab("results")}>
+        <button
+          className={`side-nav${tab === "results" ? " selected" : ""}`}
+          onClick={() => changeTab("results")}
+        >
           <BarChart3 size={18} />
           Candidate results <span>100</span>
         </button>
@@ -124,57 +140,71 @@ export function Dashboard({ initialTab }: { initialTab: string }) {
         <header className="topbar">
           <span>
             <LayoutDashboard size={15} />
-            <span>Hiring pipelines</span>
+            <span>{tab === "builder" ? "Workflows" : "Hiring pipelines"}</span>
             <ChevronRight size={14} />
-            <strong>AI FDE</strong>
+            <strong>{tab === "builder" ? "Builder" : "AI FDE"}</strong>
           </span>
           <Pill tone="neutral">
             <span className="green-dot" />
             Demo workspace
           </Pill>
         </header>
-        <main className="dashboard-main">
+        <main
+          className={`dashboard-main${tab === "builder" ? " builder-main" : ""}`}
+        >
           <div className="role-heading">
             <div>
               <div className="eyebrow">
                 <span className="green-dot" />
-                ENGINEERING · CUSTOMER-FACING
+                {tab === "builder"
+                  ? "DESIGNED AROUND THE ROLE"
+                  : "ENGINEERING · CUSTOMER-FACING"}
               </div>
-              <h1>AI Forward Deployed Engineer</h1>
+              <h1>
+                {tab === "builder"
+                  ? "Build around the work."
+                  : "AI Forward Deployed Engineer"}
+              </h1>
               <p>
-                Find the people who can turn a customer problem into a working
-                solution.
+                {tab === "builder"
+                  ? "Your role. Your workflow. The signals that matter."
+                  : "Find the people who can turn a customer problem into a working solution."}
               </p>
             </div>
-            <button
-              className="btn btn-dark"
-              onClick={() => changeTab("invites")}
-            >
-              <Plus size={17} />
-              Invite candidate
-            </button>
+            {tab !== "builder" && (
+              <button
+                className="btn btn-dark"
+                onClick={() => changeTab("invites")}
+              >
+                <Plus size={17} />
+                Invite candidate
+              </button>
+            )}
           </div>
-          <div className="role-meta">
-            <span>
-              <GitBranch size={15} />
-              Custom hiring pipeline
-            </span>
-            <span>
-              <Clock3 size={15} />
-              ~2h 45m total
-            </span>
-            <span>
-              <Users size={15} />
-              100 sample applicants
-            </span>
-            <Pill tone="green">
-              <Check size={12} />
-              Finalized
-            </Pill>
-          </div>
+          {tab !== "builder" && (
+            <div className="role-meta">
+              <span>
+                <GitBranch size={15} />
+                Custom hiring pipeline
+              </span>
+              <span>
+                <Clock3 size={15} />
+                ~2h 45m total
+              </span>
+              <span>
+                <Users size={15} />
+                100 sample applicants
+              </span>
+              <Pill tone="green">
+                <Check size={12} />
+                Finalized
+              </Pill>
+            </div>
+          )}
           <nav className="tabs" aria-label="Hiring pipeline tabs">
             {[
               ["pipeline", "Pipeline", GitBranch],
+              ["builder", "Builder", Blocks],
               ["invites", "Invites", Mail],
               ["results", "Results", BarChart3],
             ].map(([id, label, Icon]) => {
@@ -192,7 +222,7 @@ export function Dashboard({ initialTab }: { initialTab: string }) {
               );
             })}
           </nav>
-          {loadError && (
+          {loadError && tab !== "builder" && (
             <div className="alert error">
               {loadError}
               <button onClick={refresh}>Retry</button>
@@ -200,6 +230,8 @@ export function Dashboard({ initialTab }: { initialTab: string }) {
           )}
           {tab === "pipeline" ? (
             <Pipeline onBrief={setBrief} />
+          ) : tab === "builder" ? (
+            <WorkflowBuilder />
           ) : tab === "invites" ? (
             <Invites invites={invites} refresh={refresh} config={config} />
           ) : (
