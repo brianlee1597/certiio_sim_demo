@@ -23,10 +23,13 @@ class TranscriptOutbox:
     def __init__(self, client, origin, invitation_id):
         self.client, self.origin, self.invitation_id = client, origin, invitation_id
         self.pending = {}
+        self.delivered = set()
         self.lock = asyncio.Lock()
 
     def add(self, item):
         if not isinstance(item, llm.ChatMessage) or item.role not in ('user', 'assistant') or not item.text_content:
+            return
+        if item.id in self.delivered:
             return
         self.pending[item.id] = {
             'invitationId': self.invitation_id,
@@ -43,14 +46,34 @@ class TranscriptOutbox:
                         if response.status_code == 409:
                             # The app has frozen the evidence at the deadline or after submission.
                             del self.pending[key]
+                            self.delivered.add(key)
                             break
                         response.raise_for_status()
                         del self.pending[key]
+                        self.delivered.add(key)
                         break
                     except (httpx.HTTPError, OSError):
                         if attempt == 3:
                             raise RuntimeError('Transcript persistence is unavailable; retry submission.')
                         await asyncio.sleep(0.25 * 2 ** attempt)
+
+
+async def finalize_transcript(session, outbox, *, timeout=12.0):
+    """Bound the entire save operation below the browser's 15-second RPC limit."""
+    session.input.set_audio_enabled(False)
+    try:
+        async with asyncio.timeout(timeout):
+            await session.interrupt(force=True)
+            await session.commit_user_turn(skip_reply=True, transcript_timeout=3.0, stt_flush_duration=0.5)
+            # commit_user_turn triggers end-of-turn handling asynchronously.
+            # Wait for the resulting history item before acknowledging its save.
+            await session.wait_for_idle()
+            for item in session.history.items:
+                outbox.add(item)
+            await outbox.flush()
+    except (Exception, asyncio.CancelledError):
+        session.input.set_audio_enabled(True)
+        raise
 
 
 @server.rtc_session(agent_name=AGENT_NAME)
@@ -66,6 +89,19 @@ async def customer_session(ctx: agents.JobContext):
     await ctx.connect()
     session = None
     closing = False
+    session_closed = False
+    flush_lock = asyncio.Lock()
+    disconnected = asyncio.Event()
+
+    @ctx.room.on('disconnected')
+    def room_disconnected(*_):
+        disconnected.set()
+
+    async def tick():
+        try:
+            await asyncio.wait_for(disconnected.wait(), timeout=0.7)
+        except TimeoutError:
+            pass
 
     async def state():
         response = await client.get(f'{origin}/api/agent/state', params={'invitationId': invitation_id})
@@ -75,34 +111,35 @@ async def customer_session(ctx: agents.JobContext):
     @ctx.room.local_participant.register_rpc_method('flush_transcript')
     async def flush_transcript(data: rtc.RpcInvocationData):
         nonlocal closing
-        if data.caller_identity != f'candidate-{invitation_id}' or session is None:
+        if data.caller_identity != f'candidate-{invitation_id}' or session is None or session_closed:
             raise rtc.RpcError(code=1500, message='The conversation is not ready.')
+        if flush_lock.locked():
+            raise rtc.RpcError(code=1500, message='A transcript save is already in progress. Retry shortly.')
         closing = True
-        session.input.set_audio_enabled(False)
         try:
-            await session.interrupt()
-            await session.commit_user_turn(skip_reply=True, transcript_timeout=3.0, stt_flush_duration=0.5)
-            # Include any item committed while the final transcription was settling.
-            for item in session.history.items:
-                outbox.add(item)
-            await asyncio.wait_for(outbox.flush(), timeout=9)
+            async with flush_lock:
+                await finalize_transcript(session, outbox)
             return json.dumps({'saved': True})
+        except asyncio.CancelledError:
+            closing = False
+            raise
         except Exception as error:
             closing = False
-            session.input.set_audio_enabled(True)
+            logger.exception('Final transcript save failed')
             raise rtc.RpcError(code=1500, message='Transcript save failed. Retry submission.') from error
 
     try:
         # Connect first, but do not listen, speak, or start the timer before explicit candidate confirmation.
         deadline = time.monotonic() + 120
         current = await state()
-        while current['status'] == 'not_started' and time.monotonic() < deadline:
-            await asyncio.sleep(0.7)
+        while current['status'] == 'not_started' and time.monotonic() < deadline and not disconnected.is_set():
+            await tick()
             current = await state()
-        if current['status'] != 'active':
+        if current['status'] != 'active' or disconnected.is_set():
             return
         history = llm.ChatContext()
         for segment in current.get('transcript', []):
+            outbox.delivered.add(segment['segment_id'])
             history.add_message(role='user' if segment['speaker'] == 'candidate' else 'assistant', content=segment['text'],
                                 id=segment['segment_id'], created_at=segment['occurred_at'] / 1000)
         session = AgentSession(
@@ -116,8 +153,14 @@ async def customer_session(ctx: agents.JobContext):
         def capture(event):
             outbox.add(event.item)
 
+        @session.on('close')
+        def closed(_):
+            nonlocal session_closed
+            session_closed = True
+
         await session.start(room=ctx.room, agent=Agent(instructions=CUSTOMER_INSTRUCTIONS, chat_ctx=history),
-                            room_options=room_io.RoomOptions(video_input=False))
+                            room_options=room_io.RoomOptions(video_input=False, close_on_disconnect=False,
+                                                             participant_identity=f'candidate-{invitation_id}'))
         if current.get('transcript'):
             session.generate_reply(instructions='Briefly welcome the candidate back and continue the existing customer conversation. Do not restart discovery.')
         else:
@@ -125,8 +168,8 @@ async def customer_session(ctx: agents.JobContext):
 
         warned = False
         failures = 0
-        while True:
-            await asyncio.sleep(0.7)
+        while not disconnected.is_set() and not session_closed:
+            await tick()
             try:
                 await outbox.flush()
                 current = await state()
@@ -144,7 +187,12 @@ async def customer_session(ctx: agents.JobContext):
     finally:
         if session is not None:
             await session.aclose()
+        try:
+            await asyncio.wait_for(outbox.flush(), timeout=6)
+        except (RuntimeError, TimeoutError):
+            logger.exception('Final cleanup could not persist pending transcript')
         await client.aclose()
+        ctx.shutdown(reason='Customer session ended')
 
 
 if __name__ == '__main__':

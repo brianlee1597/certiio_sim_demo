@@ -114,7 +114,7 @@ export function Workspace({ stage }: { stage: Stage }) {
     }
   }
   return (
-    <main className="workspace-page">
+    <main className={`workspace-page${stage === "roleplay" ? " workspace-roleplay" : ""}`}>
       <header className="workspace-header">
         <Link href="/exercise">
           <Brand />

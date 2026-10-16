@@ -24,10 +24,12 @@ import {
   Mic,
   MicOff,
   PlugZap,
+  RefreshCw,
 } from "lucide-react";
 import { api, Spinner } from "./shared";
 import { StageBrief } from "./dashboard";
 import type { ExerciseData } from "./candidate";
+import { RoleplayTranscript } from "./roleplay-transcript";
 export type RoleplayHandle = { flush: () => Promise<void> };
 const Roleplay = forwardRef<
   RoleplayHandle,
@@ -112,9 +114,9 @@ const Roleplay = forwardRef<
             "The call disconnected. Reconnect below; your original deadline and saved transcript are preserved.",
           );
         }}
-        style={{ width: "100%", height: "100%" }}
+        className="roleplay-room"
       >
-        <Call ref={call} data={data} onStarted={onStarted} onError={onError} />
+        <RoleplayCall ref={call} data={data} onStarted={onStarted} onError={onError} />
         <RoomAudioRenderer />
       </LiveKitRoom>
     );
@@ -193,7 +195,7 @@ const Roleplay = forwardRef<
     </div>
   );
 });
-const Call = forwardRef<
+export const RoleplayCall = forwardRef<
   RoleplayHandle,
   {
     data: ExerciseData;
@@ -223,12 +225,20 @@ const Call = forwardRef<
           throw new Error(
             "The AI customer is not connected. Reconnect before submitting.",
           );
-        await room.localParticipant.performRpc({
-          destinationIdentity: agent.identity,
-          method: "flush_transcript",
-          payload: "{}",
-          responseTimeout: 15,
-        });
+        try {
+          const receipt = await room.localParticipant.performRpc({
+            destinationIdentity: agent.identity,
+            method: "flush_transcript",
+            payload: "{}",
+            responseTimeout: 15,
+          });
+          if (JSON.parse(receipt).saved !== true)
+            throw new Error("The customer could not confirm the transcript save.");
+        } catch (error) {
+          throw new Error(
+            `${(error as Error).message}. Your saved transcript is preserved. Reconnect to the customer, then retry submission.`,
+          );
+        }
       },
     }),
     [agent, room],
@@ -287,6 +297,9 @@ const Call = forwardRef<
           </div>
         )}
         <div className="call-controls">
+          <button aria-label="Reconnect customer" title="Reconnect customer" onClick={() => room.disconnect()}>
+            <RefreshCw size={18} />
+          </button>
           <button
             aria-label={
               isMicrophoneEnabled ? "Mute microphone" : "Enable microphone"
@@ -334,40 +347,7 @@ const Call = forwardRef<
           )}
         </div>
       </div>
-      <aside className="live-transcript">
-        <h3>Conversation transcript</h3>
-        <p>
-          Captured as you talk. This context follows you into Solution Design.
-        </p>
-        <div className="transcript-list">
-          {data.transcript.map((s) => (
-            <div
-              key={s.segment_id}
-              className={`transcript-message ${s.speaker}`}
-            >
-              <div>
-                <strong>{s.speaker === "customer" ? "Maya" : "You"}</strong>
-                <span>Saved</span>
-              </div>
-              <p>{s.text}</p>
-            </div>
-          ))}
-          {liveText.length > 0 && (
-            <div className="transcript-message">
-              <div>
-                <strong>Live caption</strong>
-                <span>Transcribing…</span>
-              </div>
-              <p>{liveText[liveText.length - 1].text}</p>
-            </div>
-          )}
-          {!data.transcript.length && !liveText.length && (
-            <p className="fineprint">
-              Your transcript will appear once the conversation begins.
-            </p>
-          )}
-        </div>
-      </aside>
+      <RoleplayTranscript transcript={data.transcript} caption={liveText.at(-1)?.text} />
     </div>
   );
 });
