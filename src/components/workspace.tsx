@@ -18,6 +18,7 @@ import { StageBrief } from "./dashboard";
 import type { BoardHandle } from "./design-board";
 import type { DeliveryHandle } from "./delivery";
 import type { RoleplayHandle } from "./roleplay";
+import { submitRoleplay } from "@/lib/roleplay-submission";
 const Board = dynamic(() => import("./design-board"), {
   ssr: false,
   loading: () => (
@@ -104,8 +105,23 @@ export function Workspace({ stage }: { stage: Stage }) {
     try {
       if (stage === "design") await board.current?.save();
       if (stage === "delivery") await delivery.current?.save();
-      if (stage === "roleplay") await roleplay.current?.flush();
-      await api(`/api/stages/${stage}/submit`, {});
+      if (stage === "roleplay") {
+        await submitRoleplay({
+          status: async () => {
+            const latest = await api<ExerciseData>("/api/exercise");
+            setData(latest);
+            return latest.runs.find((r) => r.stage === "roleplay")?.status;
+          },
+          flush: async () => {
+            if (!roleplay.current)
+              throw new Error("Reconnect to the customer before submitting.");
+            await roleplay.current.flush();
+          },
+          submit: () => api("/api/stages/roleplay/submit", {}),
+        });
+      } else {
+        await api(`/api/stages/${stage}/submit`, {});
+      }
       location.href = "/exercise";
     } catch (e) {
       setError((e as Error).message);

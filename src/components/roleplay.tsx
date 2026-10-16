@@ -30,6 +30,7 @@ import { api, Spinner } from "./shared";
 import { StageBrief } from "./dashboard";
 import type { ExerciseData } from "./candidate";
 import { RoleplayTranscript } from "./roleplay-transcript";
+import { flushRoleplayTranscript } from "@/lib/roleplay-submission";
 export type RoleplayHandle = { flush: () => Promise<void> };
 const Roleplay = forwardRef<
   RoleplayHandle,
@@ -226,14 +227,7 @@ export const RoleplayCall = forwardRef<
             "The AI customer is not connected. Reconnect before submitting.",
           );
         try {
-          const receipt = await room.localParticipant.performRpc({
-            destinationIdentity: agent.identity,
-            method: "flush_transcript",
-            payload: "{}",
-            responseTimeout: 15,
-          });
-          if (JSON.parse(receipt).saved !== true)
-            throw new Error("The customer could not confirm the transcript save.");
+          await flushRoleplayTranscript(room.localParticipant, agent.identity);
         } catch (error) {
           throw new Error(
             `${(error as Error).message}. Your saved transcript is preserved. Reconnect to the customer, then retry submission.`,
