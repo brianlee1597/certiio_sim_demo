@@ -2,7 +2,7 @@
 
 A standalone AI Forward Deployed Engineer hiring demo. The finalized pipeline, invitation manager, candidate workspaces, and 100 fictional ranked applicants live in one Next.js application. The customer agent deploys separately to LiveKit Cloud.
 
-Deployment: [certiio-sim-demo.vercel.app](https://certiio-sim-demo.vercel.app). Hosted login and invitations await the isolated Neon database connection; live conversation additionally requires the LiveKit handoff.
+Deployment: [certiio-sim-demo.vercel.app](https://certiio-sim-demo.vercel.app). Hosted login, invitations, and private exercise links are connected to an isolated Neon database. Live conversation requires the LiveKit handoff.
 
 ## Run locally
 

@@ -1,8 +1,9 @@
 import { currentSession } from "@/server/auth";
-import { STAGES, type Stage } from "@/lib/domain";
-import { notFound } from "next/navigation";
+import { STAGES, stageAllowed, type Stage } from "@/lib/domain";
+import { notFound, redirect } from "next/navigation";
 import { InvitationEntry } from "@/components/candidate";
 import { Workspace } from "@/components/workspace";
+import { expireStages, runsFor } from "@/server/simulations";
 export const dynamic = "force-dynamic";
 export default async function StagePage({
   params,
@@ -12,9 +13,12 @@ export default async function StagePage({
   const { stage } = await params;
   if (!STAGES.includes(stage as Stage)) notFound();
   const session = await currentSession("candidate");
-  return session ? (
-    <Workspace stage={stage as Stage} />
-  ) : (
-    <InvitationEntry error="Open your private invitation to continue this simulation." />
-  );
+  if (!session)
+    return (
+      <InvitationEntry error="Open your private invitation to continue this simulation." />
+    );
+  await expireStages(session.invite_id!);
+  if (!stageAllowed(await runsFor(session.invite_id!), stage as Stage))
+    redirect("/exercise");
+  return <Workspace stage={stage as Stage} />;
 }
