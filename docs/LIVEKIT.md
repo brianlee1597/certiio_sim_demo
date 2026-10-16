@@ -2,6 +2,19 @@
 
 The app requires a real LiveKit customer conversation. There is no simulated roleplay or skip button. Camera footage is neither recorded by this app nor used for grading; the AI agent consumes audio only.
 
+## Current demo deployment
+
+Deployed October 15, 2026 to LiveKit Cloud in `us-east`:
+
+- Agent ID: `CA_rLPxmd5aCQtJ`
+- Dispatch name: `certiio-northstar-customer`
+- Application: https://certiio-sim-demo.vercel.app
+- Deployment configuration: `agent/livekit.toml`
+
+The agent is running. Named dispatch, room connection, callback authentication, and separate language-model, speech-synthesis, and speech-recognition checks passed. The existing emailed invitation is ready; the deployment checks did not start any assessment timer. Follow step 4 for the first actual candidate conversation.
+
+For this existing deployment, use `lk agent deploy` from `agent/` after selecting the project. Do not run `lk agent create` again unless you intend to create another agent. The initial setup steps below are retained for a fresh environment.
+
 ## 1. Create the project
 
 Create a separate project in [LiveKit Cloud](https://cloud.livekit.io/). Enable LiveKit Inference and ensure the project has available inference/agent capacity. Copy its WebSocket URL, API key, and API secret. LiveKit Inference supplies speech recognition, language generation, speech synthesis, and turn detection without separate provider accounts. Reference: [voice AI quickstart](https://docs.livekit.io/agents/start/voice-ai/).
@@ -92,4 +105,4 @@ The agent's `APP_URL` must be reachable from wherever the process runs. A local 
 
 If the customer does not join, check the agent's dispatch name, status, project credentials, capacity, and callback authentication. If a transcript save fails, submission remains blocked and can be retried. Deadline expiry preserves the last acknowledged transcript; conversation after expiry is not accepted. The agent stops when the stage ends.
 
-Live two-way audio, permission prompts, and provider connectivity remain unverified until these project credentials are configured.
+Provider connectivity has been verified independently. Browser camera/microphone permissions, two-way conversation, reconnect, and final transcript carryover still require the real attempt above.

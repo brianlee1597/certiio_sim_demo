@@ -24,11 +24,18 @@ The downstream browser journey used isolated local QA attempts with a seeded con
 - The scoped production invitation link opens successfully and creates a candidate session without starting a timer. The account owner confirmed the invitation arrived in their inbox.
 - Hosted checks passed for reusable email previews, Secure/HTTP-only/SameSite session cookies, employer/candidate separation, protected exercise access, server-enforced stage order, authenticated agent callback reachability, and absent-LiveKit gating. No simulation timer was started.
 
-## Awaiting LiveKit configuration
+## LiveKit activation
+
+- Deployed the included customer agent to LiveKit Cloud (`CA_rLPxmd5aCQtJ`, `us-east`). Cloud status is Running, and the worker registered with dispatch name `certiio-northstar-customer`.
+- Verified the LiveKit URL, credentials, agent name, application origin, and callback secret match between Vercel Production and the agent environment. The deployed app reports LiveKit ready, and authenticated state callbacks succeed.
+- Dispatched the named agent into an isolated verification room and confirmed it joined. Removed that temporary room afterward. All three stages on the recipient's invitation remain not started.
+- Independent LiveKit Inference calls passed for `google/gemma-4-31b-it`, Fish Audio synthesis with the configured voice, and AssemblyAI transcription of that synthetic test audio. These checks did not create candidate evidence or advance an attempt.
+
+## Remaining live checks
 
 - The reused Resend key is send-only, so provider delivery-status reads are unavailable. Actual inbox delivery was confirmed by the recipient.
-- The local tldraw license loaded successfully. Validation within the hosted candidate workspace remains pending the LiveKit setup, because Solution Design stays locked until the real roleplay is submitted. The inspected license expires November 4, 2026.
-- LiveKit camera/mic permissions, two-way speech, model inference, dispatch, reconnect, final transcript flush, and a complete real three-stage attempt await the user's LiveKit project credentials and deployed customer agent. Follow `docs/LIVEKIT.md`.
+- The local tldraw license loaded successfully. Validation within the hosted candidate workspace remains pending the real roleplay submission, because Solution Design stays locked until then. The inspected license expires November 4, 2026.
+- Browser camera/mic permissions, two-way conversation, reconnect, final transcript flush, and a complete real three-stage attempt remain to be checked with the recipient's actual attempt. LiveKit configuration and agent deployment are complete. Follow step 4 in `docs/LIVEKIT.md`.
 - Automated deadline checks passed. A real browser conversation running all the way to its 15-minute deadline has not been performed.
 - Private upload tests exercised small PNG/ZIP files and malformed-file rejection. The 50 MB cap is enforced by both upload authorization and completion checks; a full 50 MB upload has not been exercised in the browser.
 
