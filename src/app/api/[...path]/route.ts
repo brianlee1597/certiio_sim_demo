@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { get, head } from "@vercel/blob";
@@ -14,11 +13,9 @@ import {
 } from "@/lib/domain";
 import { getDb } from "@/server/db";
 import {
-  COOKIE,
   checkOrigin,
   currentSession,
   equal,
-  hash,
   newSession,
   rateLimit,
   requireSession,
@@ -233,31 +230,6 @@ async function route(
     });
   }
   if (method !== "GET") checkOrigin(req);
-  if (path === "login" && method === "POST") {
-    await rateLimit(
-      `login:${req.headers.get("x-forwarded-for")?.split(",")[0] || "local"}`,
-      10,
-      15 * 60000,
-    );
-    const body = z
-      .object({ password: z.string().max(300) })
-      .parse(await json(req));
-    if (!process.env.DEMO_ADMIN_PASSWORD)
-      throw new AppError(503, "The employer password has not been configured.");
-    if (!equal(body.password, process.env.DEMO_ADMIN_PASSWORD))
-      throw new AppError(401, "That password doesn’t match. Please try again.");
-    await newSession("admin");
-    return NextResponse.json({ ok: true });
-  }
-  if (path === "logout" && method === "POST") {
-    const token = (await cookies()).get(`${COOKIE}_admin`)?.value;
-    if (token)
-      await (
-        await getDb()
-      ).query("DELETE FROM sessions WHERE token_hash=$1", [hash(token)]);
-    (await cookies()).delete(`${COOKIE}_admin`);
-    return NextResponse.json({ ok: true });
-  }
   if (path === "access" && method === "POST") {
     const body = z
       .object({ token: z.string().max(200) })
@@ -267,7 +239,6 @@ async function route(
     return NextResponse.json({ ok: true });
   }
   if (path === "admin/invitations") {
-    await requireSession("admin");
     if (method === "GET") {
       const db = await getDb();
       await db.query(
@@ -321,7 +292,6 @@ async function route(
   }
   const resend = path.match(/^admin\/invitations\/([^/]+)\/resend$/);
   if (resend && method === "POST") {
-    await requireSession("admin");
     await rateLimit("invite-send", 30, 3600000);
     const db = await getDb();
     const inv = (
@@ -339,7 +309,6 @@ async function route(
     return NextResponse.json({ sent: true });
   }
   if (path === "admin/config" && method === "GET") {
-    await requireSession("admin");
     return NextResponse.json({
       livekit: livekitConfigured(),
       email: !!process.env.RESEND_API_KEY,

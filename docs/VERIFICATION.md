@@ -2,6 +2,14 @@
 
 October 15, 2026. This records observed checks separately from tests that require live configuration.
 
+## Employer access update
+
+At the owner's request, the employer password gate, login/logout endpoints, and sign-out control have been removed. The dashboard and invitation/configuration endpoints are public demo controls. Earlier login checks below describe the original implementation.
+
+- All 25 application tests and the production build pass.
+- Cookie-free HTTP checks confirm that the pipeline and invitation/configuration reads return 200, invitation creation reaches input validation without login, and cross-origin writes remain rejected. No test email was sent.
+- Candidate exercise retrieval, submission, LiveKit tokens, artifacts, and unauthenticated agent callbacks still return 401 without the required candidate session or callback secret.
+
 ## Passed
 
 - Production Next.js build and strict TypeScript check. Vercel production deployment is reachable at https://certiio-sim-demo.vercel.app; the login page and starter ZIP return 200, and unauthenticated exercise access returns 401.

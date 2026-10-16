@@ -2,7 +2,7 @@
 
 A standalone AI Forward Deployed Engineer hiring demo. The finalized pipeline, invitation manager, candidate workspaces, and 100 fictional ranked applicants live in one Next.js application. The customer agent deploys separately to LiveKit Cloud.
 
-Deployment: [certiio-sim-demo.vercel.app](https://certiio-sim-demo.vercel.app). Hosted login, invitations, and private exercise links are connected to an isolated Neon database. Live conversation requires the LiveKit handoff.
+Deployment: [certiio-sim-demo.vercel.app](https://certiio-sim-demo.vercel.app). The employer dashboard opens without a password. Invitations and candidate exercise links are connected to an isolated Neon database. Live conversation requires the LiveKit handoff.
 
 ## Run locally
 
@@ -15,14 +15,13 @@ npm run dev
 
 Without `DATABASE_URL`, development uses an isolated PGlite database under `.data/postgres`. Hosted production **requires** Postgres. This fallback changes storage only; it does not simulate a LiveKit conversation or bypass any stage.
 
-Open `http://localhost:3000` and sign in with `DEMO_ADMIN_PASSWORD`. The dashboard opens directly on the finalized pipeline. Use Invites to email a private exercise link. Invites expire after seven days; email previews do not start an attempt. Resending preserves the link, progress, and original expiry. For an expired invitation, create a new one.
+Open `http://localhost:3000`. The dashboard opens directly on the finalized pipeline without signing in. Pipeline, Invites, and Results are public demo controls. Use Invites to email an exercise link. Candidates still need a valid invitation and scoped session to access their exercise. Invites expire after seven days; email previews do not start an attempt. Resending preserves the link, progress, and original expiry. For an expired invitation, create a new one.
 
 ## Environment
 
 | Variable | Purpose |
 | --- | --- |
 | `APP_URL` | Canonical HTTPS deployment origin; localhost in development |
-| `DEMO_ADMIN_PASSWORD` | Employer demo login |
 | `SESSION_SECRET` | At least 32 random characters; signs invite links |
 | `DATABASE_URL` | Isolated Neon Postgres connection URL |
 | `BLOB_READ_WRITE_TOKEN` | Token for the demo's **private** Vercel Blob store |
@@ -45,7 +44,7 @@ Generate each secret separately with `openssl rand -hex 32`. Changing `SESSION_S
 5. Deploy with `npx vercel --prod`. Redeploy after changing environment values; public tldraw configuration is embedded at build time.
 6. Follow [LiveKit setup](docs/LIVEKIT.md), then complete [verification](docs/VERIFICATION.md).
 
-Do not enable Vercel deployment protection on the production candidate origin: candidates and authenticated LiveKit/Blob service callbacks must be able to reach it. Employer access remains protected by the application's password and HTTP-only session. Preview deployments may keep Vercel protection and must use isolated service settings if exercised.
+Do not enable Vercel deployment protection on the production candidate origin: candidates and authenticated LiveKit/Blob service callbacks must be able to reach it. The employer dashboard and invitation controls are public; candidate sessions, artifact ownership, callback authentication, invitation email rate limits, and request-origin checks remain enforced. Preview deployments may keep Vercel protection and must use isolated service settings if exercised.
 
 ## Candidate flow
 
@@ -67,7 +66,7 @@ The downloadable [starter](starter/README.md) includes synthetic tickets, two te
 
 ## Code map
 
-- `src/app`: Next.js pages and authenticated API router.
+- `src/app`: Next.js pages, public demo controls, and authenticated candidate/service APIs.
 - `src/components`: employer dashboard, candidate overview, context, workspaces.
 - `src/server`: session security, transactional stage state, email, LiveKit, schema.
 - `src/lib`: domain types, stage briefs, deterministic synthetic ranking.

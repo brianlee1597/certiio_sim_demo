@@ -16,7 +16,6 @@ import {
   FileText,
   GitBranch,
   LayoutDashboard,
-  LogOut,
   Mail,
   Network,
   PackageCheck,
@@ -114,20 +113,11 @@ export function Dashboard({ initialTab }: { initialTab: string }) {
           <span className="note-line" />
         </div>
         <div className="sidebar-bottom">
-          <span className="user-avatar">BL</span>
+          <span className="user-avatar">C</span>
           <div>
-            <strong>Demo administrator</strong>
+            <strong>Certiio demo</strong>
             <small>Employer workspace</small>
           </div>
-          <button
-            aria-label="Sign out"
-            onClick={async () => {
-              await api("/api/logout", {});
-              location.reload();
-            }}
-          >
-            <LogOut size={17} />
-          </button>
         </div>
       </aside>
       <div className="main-shell">
