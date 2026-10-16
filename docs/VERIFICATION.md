@@ -5,7 +5,7 @@ October 15, 2026. This records observed checks separately from tests that requir
 ## Passed
 
 - Production Next.js build and strict TypeScript check. Vercel production deployment is reachable at https://certiio-sim-demo.vercel.app; the login page and starter ZIP return 200, and unauthenticated exercise access returns 401.
-- 15 application tests covering exactly 100 stable fictional rankings, weighted score consistency, invitation isolation/tampering/expiry, safe email previews, stage order, immutable deadlines, transcript deduplication, immediate transcript retrieval, duplicate submissions, revision conflicts, expiry, artifact ownership/readiness, ZIP/notes requirements, absent-LiveKit gating, resend behavior, and email failure state.
+- 20 application tests covering exactly 100 stable fictional rankings, weighted score consistency, invitation isolation/tampering/expiry, safe email previews, stage order, immutable deadlines, transcript deduplication, immediate transcript retrieval, duplicate submissions, revision conflicts, expiry, artifact ownership/readiness, ZIP/notes requirements, absent-LiveKit gating, resend behavior, email failure state, and named customer dispatch with unrelated, pending, running, or completed jobs.
 - Three Python agent tests covering deduplication, callback failure retry/pending state, and frozen evidence.
 - Ten HTTP checks against the running app: unauthenticated access, admin/candidate separation, direct-stage bypass rejection, absent-LiveKit rejection, callback authentication, cross-origin rejection, cross-candidate artifact isolation, and authenticated private PNG streaming.
 - Browser: employer login, finalized vertical pipeline, Results search, leaderboard/detail score consistency, evidence drawer, keyboard Escape, candidate invitation entry, sequential locks, and transcript context modal.
@@ -30,6 +30,7 @@ The downstream browser journey used isolated local QA attempts with a seeded con
 - Verified the LiveKit URL, credentials, agent name, application origin, and callback secret match between Vercel Production and the agent environment. The deployed app reports LiveKit ready, and authenticated state callbacks succeed.
 - Dispatched the named agent into an isolated verification room and confirmed it joined. Removed that temporary room afterward. All three stages on the recipient's invitation remain not started.
 - Independent LiveKit Inference calls passed for `google/gemma-4-31b-it`, Fish Audio synthesis with the configured voice, and AssemblyAI transcription of that synthetic test audio. These checks did not create candidate evidence or advance an attempt.
+- Investigated the first candidate connection failure. The room contained an unnamed automatic dispatch with no jobs; the application incorrectly treated it as a pending customer. Dispatch reuse now only considers `certiio-northstar-customer`. Regression tests reproduced the skipped dispatch before the fix and passed afterward. The recipient reconnected and started their conversation independently; the investigation did not reset or submit that attempt.
 
 ## Remaining live checks
 

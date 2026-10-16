@@ -41,28 +41,28 @@ export async function createRoomToken(id: string, name: string) {
     process.env.LIVEKIT_API_KEY,
     process.env.LIVEKIT_API_SECRET,
   );
+  const agentName = process.env.LIVEKIT_AGENT_NAME || "certiio-northstar-customer";
   const dispatches = await dispatcher.listDispatch(room);
+  // LiveKit also creates an unnamed automatic dispatch with no jobs. It does
+  // not target our named customer and must not prevent an explicit dispatch.
   const pendingOrRunning = dispatches.some(
     (d) =>
-      !d.state?.jobs.length ||
-      d.state.jobs.some(
-        (j) =>
-          !j.state ||
-          j.state.status === JobStatus.JS_PENDING ||
-          j.state.status === JobStatus.JS_RUNNING,
-      ),
+      d.agentName === agentName &&
+      (!d.state?.jobs.length ||
+        d.state.jobs.some(
+          (j) =>
+            !j.state ||
+            j.state.status === JobStatus.JS_PENDING ||
+            j.state.status === JobStatus.JS_RUNNING,
+        )),
   );
   if (!pendingOrRunning)
-    await dispatcher.createDispatch(
-      room,
-      process.env.LIVEKIT_AGENT_NAME || "certiio-northstar-customer",
-      {
-        metadata: JSON.stringify({
-          invitationId: id,
-          appUrl: process.env.APP_URL,
-        }),
-      },
-    );
+    await dispatcher.createDispatch(room, agentName, {
+      metadata: JSON.stringify({
+        invitationId: id,
+        appUrl: process.env.APP_URL,
+      }),
+    });
   const token = new AccessToken(
     process.env.LIVEKIT_API_KEY,
     process.env.LIVEKIT_API_SECRET,
