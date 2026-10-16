@@ -1,0 +1,13 @@
+.env*
+.git
+.data
+.local
+agent/.venv
+agent/__pycache__
+agent/tests/__pycache__
+starter/node_modules
+node_modules
+.next
+coverage
+test-results
+playwright-report
